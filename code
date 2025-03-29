@@ -4,15 +4,22 @@
 local HttpService = game:GetService("HttpService")
 
 -- Configuration
-local API_URL = "https://whitelist-bot-production-a088.up.railway.app/api"
+local API_URL = "https://whitelist-bot-production-a088.up.railway.app/api" -- Replace with your actual API URL
 local VERSION = "1.0.0"
 
 -- Generate a Hardware ID based on machine info
 local function generateHWID()
+    -- Ensure it's running in a LocalScript, as LocalPlayer is only available there
+    local player = game.Players.LocalPlayer
+    if not player then
+        warn("This script should be running in a LocalScript!")
+        return nil
+    end
+
     -- Combine several unique identifiers to create a HWID
     local guidPart = HttpService:GenerateGUID(false):gsub("-", "")
     local placeidPart = tostring(game.PlaceId)
-    local usernamePart = game.Players.LocalPlayer.Name:sub(1, 8)
+    local usernamePart = player.Name:sub(1, 8)
     
     -- Create a unique hash using these components
     local combinedString = guidPart .. placeidPart .. usernamePart
@@ -28,6 +35,11 @@ end
 
 -- Function to validate the key with the server
 local function validateKey(key, hwid)
+    -- Validate input data before proceeding
+    if not key or not hwid then
+        return {success = false, error = "Invalid key or HWID"}
+    end
+
     local success, response = pcall(function()
         local data = {
             key = key,
@@ -69,6 +81,10 @@ end
 -- Main function to initiate whitelist check
 local function checkWhitelist(scriptKey)
     local hwid = generateHWID()
+    
+    if not hwid then
+        return false, "Failed to generate HWID"
+    end
     
     -- Show loading message
     local screenGui = Instance.new("ScreenGui")
@@ -112,18 +128,21 @@ end
 
 -- This is the function that will be called when the script is executed
 return function(scriptKey)
+    -- Validate scriptKey
     if not scriptKey or type(scriptKey) ~= "string" then
         warn("Invalid script key format.")
         return false
     end
     
-    local success, scriptUrl = checkWhitelist(scriptKey)
+    -- Run whitelist check and load the script if valid
+    local success, scriptUrlOrError = checkWhitelist(scriptKey)
     
-    if success and scriptUrl then
-        -- Load the actual script if validation was successful
-        loadstring(game:HttpGet(https://raw.githubusercontent.com/ctweake/xenscript/refs/heads/main/xens))()
+    if success and scriptUrlOrError then
+        -- If whitelist is successful, load the script
+        loadstring(game:HttpGet(scriptUrlOrError))()
         return true
     else
+        warn("Failed to authenticate script key: " .. (scriptUrlOrError or "Unknown error"))
         return false
     end
 end
