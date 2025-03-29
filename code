@@ -121,7 +121,7 @@ return function(scriptKey)
     
     if success and scriptUrl then
         -- Load the actual script if validation was successful
-        loadstring(game:HttpGet(scriptUrl))()
+        loadstring(game:HttpGet(https://raw.githubusercontent.com/ctweake/xenscript/refs/heads/main/xens))()
         return true
     else
         return false
