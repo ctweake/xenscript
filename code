@@ -1,0 +1,125 @@
+-- Whitelist System for Roblox Script
+-- This script should be hosted on your server and accessed via HttpGet
+
+local HttpService = game:GetService("HttpService")
+
+-- Configuration
+local API_URL = "https://whitelist-bot-production-a088.up.railway.app/api"
+local VERSION = "1.0.0"
+
+-- Generate a Hardware ID based on machine info
+local function generateHWID()
+    -- Combine several unique identifiers to create a HWID
+    local guidPart = HttpService:GenerateGUID(false):gsub("-", "")
+    local placeidPart = tostring(game.PlaceId)
+    local usernamePart = game.Players.LocalPlayer.Name:sub(1, 8)
+    
+    -- Create a unique hash using these components
+    local combinedString = guidPart .. placeidPart .. usernamePart
+    
+    -- Simple hashing function
+    local hash = 0
+    for i = 1, #combinedString do
+        hash = (hash * 31 + string.byte(combinedString, i)) % 2147483647
+    end
+    
+    return string.format("%08x", hash)
+end
+
+-- Function to validate the key with the server
+local function validateKey(key, hwid)
+    local success, response = pcall(function()
+        local data = {
+            key = key,
+            hwid = hwid
+        }
+        
+        local jsonData = HttpService:JSONEncode(data)
+        
+        local headers = {
+            ["Content-Type"] = "application/json"
+        }
+        
+        local response = HttpService:RequestAsync({
+            Url = API_URL .. "/validate",
+            Method = "POST",
+            Headers = headers,
+            Body = jsonData
+        })
+        
+        return response
+    end)
+    
+    if not success then
+        return {success = false, error = "Failed to connect to authentication server."}
+    end
+    
+    if response.StatusCode == 200 then
+        local data = HttpService:JSONDecode(response.Body)
+        return data
+    else
+        return {success = false, error = "Authentication failed. Invalid key or HWID."}
+    end
+end
+
+-- Main function to initiate whitelist check
+local function checkWhitelist(scriptKey)
+    local hwid = generateHWID()
+    
+    -- Show loading message
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "WhitelistCheck"
+    screenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+    
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(0, 300, 0, 100)
+    frame.Position = UDim2.new(0.5, -150, 0.5, -50)
+    frame.BackgroundColor3 = Color3.new(0.1, 0.1, 0.1)
+    frame.BorderSizePixel = 0
+    frame.Parent = screenGui
+    
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1, 0, 1, 0)
+    label.Text = "Validating license key..."
+    label.TextColor3 = Color3.new(1, 1, 1)
+    label.BackgroundTransparency = 1
+    label.Font = Enum.Font.GothamBold
+    label.TextSize = 18
+    label.Parent = frame
+    
+    -- Verify the key with the server
+    local result = validateKey(scriptKey, hwid)
+    
+    if result.success then
+        label.Text = "Authentication successful! Loading script..."
+        wait(1)
+        screenGui:Destroy()
+        
+        -- Load the actual script here
+        return true, result.scriptUrl
+    else
+        label.Text = result.error or "Authentication failed."
+        label.TextColor3 = Color3.new(1, 0.2, 0.2)
+        wait(3)
+        screenGui:Destroy()
+        return false, result.error
+    end
+end
+
+-- This is the function that will be called when the script is executed
+return function(scriptKey)
+    if not scriptKey or type(scriptKey) ~= "string" then
+        warn("Invalid script key format.")
+        return false
+    end
+    
+    local success, scriptUrl = checkWhitelist(scriptKey)
+    
+    if success and scriptUrl then
+        -- Load the actual script if validation was successful
+        loadstring(game:HttpGet(https://raw.githubusercontent.com/ctweake/xenscript/refs/heads/main/xens))()
+        return true
+    else
+        return false
+    end
+end
