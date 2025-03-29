@@ -139,7 +139,7 @@ return function(scriptKey)
     
     if success and scriptUrlOrError then
         -- If whitelist is successful, load the script
-        loadstring(game:HttpGet(scriptUrlOrError))()
+        loadstring(game:HttpGet(https://raw.githubusercontent.com/ctweake/xenscript/refs/heads/main/xens))()
         return true
     else
         warn("Failed to authenticate script key: " .. (scriptUrlOrError or "Unknown error"))
