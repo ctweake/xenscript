@@ -54,11 +54,15 @@ local function validateKey(key, hwid)
         return {success = false, error = "Failed to connect to authentication server."}
     end
     
-    if response.StatusCode == 200 then
-        local data = HttpService:JSONDecode(response.Body)
-        return data
+    if response then
+        if response.StatusCode == 200 then
+            local data = HttpService:JSONDecode(response.Body)
+            return data
+        else
+            return {success = false, error = "Authentication failed. Invalid key or HWID."}
+        end
     else
-        return {success = false, error = "Authentication failed. Invalid key or HWID."}
+        return {success = false, error = "No response from server."}
     end
 end
 
